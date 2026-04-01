@@ -34,14 +34,14 @@ def process_image(image_file):
         return base64.b64encode(buffered.getvalue()).decode()
     return ""
 
-# --- 3. 自动分行并加点的魔法函数 ---
+# --- 3. 强制换行函数 ---
 def display_as_list(text):
     if not text:
         return "暂无内容"
-    # 将文本按行拆分，并过滤掉空行
+    # 将文本按行拆分
     lines = [line.strip() for line in str(text).split('\n') if line.strip()]
-    # 在每行前面加上 · 
-    return "\n".join([f"· {line}" for line in lines])
+    # 使用 HTML 的 <br> 标签来强制换行
+    return "<br>".join([f"· {line}" for line in lines])
 
 # --- 4. 页面配置 ---
 st.set_page_config(page_title="秋秋的饮品实验室", page_icon="🍹", layout="wide")
@@ -51,8 +51,8 @@ st.title("🍹 秋秋的云端饮品实验室")
 with st.sidebar:
     st.header("📝 记录新配方")
     new_name = st.text_input("饮品名称")
-    new_ingredients = st.text_area("准备材料 (每行一个)", placeholder="例：浓缩咖啡\n冰牛奶")
-    new_steps = st.text_area("制作步骤 (每行一个)", placeholder="例：杯中加冰\n倒入牛奶")
+    new_ingredients = st.text_area("准备材料 (每行一个)")
+    new_steps = st.text_area("制作步骤 (每行一个)")
     uploaded_file = st.file_uploader("📸 上传饮品照片", type=['png', 'jpg', 'jpeg'])
     
     if st.button("🚀 存入实验室"):
@@ -69,7 +69,7 @@ with st.sidebar:
 search_query = st.text_input("🔍 搜索配方库...", placeholder="输入饮品名字")
 st.markdown("---")
 
-# --- 7. 展示区：自动分行排版 ---
+# --- 7. 展示区 ---
 try:
     data = sheet.get_all_records()
     if data:
@@ -79,7 +79,6 @@ try:
         for item in reversed(data):
             with st.container():
                 col1, col2 = st.columns([1, 1.5])
-                
                 with col1:
                     img_data = item.get('图片数据')
                     if img_data:
@@ -88,14 +87,14 @@ try:
                         st.image("https://via.placeholder.com/400x300?text=No+Photo", use_container_width=True)
                 
                 with col2:
-                    st.header(f"🍸 {item.get('名称')}")
+                    st.markdown(f"### 🍸 {item.get('名称')}")
                     
-                    # 关键修改：调用 display_as_list 函数来格式化显示
-                    st.subheader("🛒 准备材料")
-                    st.markdown(display_as_list(item.get('材料')))
+                    # 使用 html 模式来强制分行
+                    st.markdown("**🛒 准备材料**")
+                    st.markdown(f"<div style='line-height:1.8'>{display_as_list(item.get('材料'))}</div>", unsafe_allow_html=True)
                     
-                    st.subheader("👨‍🍳 制作步骤")
-                    st.markdown(display_as_list(item.get('做法')))
+                    st.markdown("<br>**👨‍🍳 制作步骤**", unsafe_allow_html=True)
+                    st.markdown(f"<div style='line-height:1.8'>{display_as_list(item.get('做法'))}</div>", unsafe_allow_html=True)
                 
                 st.markdown("---")
 except Exception:
