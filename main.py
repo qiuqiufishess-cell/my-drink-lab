@@ -19,25 +19,20 @@ except Exception as e:
     st.error(f"连接失败: {e}")
     st.stop()
 
-# --- 2. 图片压缩与转换魔法 ---
+# --- 2. 图片压缩工具 (核心：防止报错) ---
 def process_image(image_file):
     if image_file is not None:
-        # 打开图片
         img = Image.open(image_file)
-        # 如果是 RGBA (带透明度)，转为 RGB 防止保存报错
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
-        
-        # 自动缩小图片尺寸（宽度设为 300 像素，等比例缩放）
-        # 这样既能看清，又不会撑爆表格单元格
-        max_width = 300
+        # 缩小尺寸
+        max_width = 400 
         w_percent = (max_width / float(img.size[0]))
         h_size = int((float(img.size[1]) * float(w_percent)))
         img = img.resize((max_width, h_size), Image.Resampling.LANCZOS)
-        
-        # 将压缩后的图片转为 Base64 字符串
+        # 压缩质量
         buffered = io.BytesIO()
-        img.save(buffered, format="JPEG", quality=70) # 压缩质量设为 70%
+        img.save(buffered, format="JPEG", quality=75)
         return base64.b64encode(buffered.getvalue()).decode()
     return ""
 
@@ -45,32 +40,29 @@ def process_image(image_file):
 st.set_page_config(page_title="秋秋的饮品实验室", page_icon="🍹", layout="wide")
 st.title("🍹 秋秋的云端饮品实验室")
 
-# --- 4. 侧边栏：全功能录入 ---
+# --- 4. 侧边栏：录入 ---
 with st.sidebar:
     st.header("📝 记录新配方")
-    new_name = st.text_input("饮品名称", placeholder="例：生椰拿铁")
-    new_ingredients = st.text_area("准备材料", placeholder="例：厚椰乳 200ml...")
-    new_steps = st.text_area("制作步骤", placeholder="例：1. 满杯冰块...")
-    uploaded_file = st.file_uploader("📸 上传照片 (会自动压缩)", type=['png', 'jpg', 'jpeg'])
+    new_name = st.text_input("饮品名称")
+    new_ingredients = st.text_area("准备材料 (每行一个)")
+    new_steps = st.text_area("制作步骤")
+    uploaded_file = st.file_uploader("📸 上传饮品照片", type=['png', 'jpg', 'jpeg'])
     
-    if st.button("🚀 存入实验室仓库"):
+    if st.button("🚀 存入实验室"):
         if new_name and new_ingredients and new_steps:
-            with st.spinner('正在处理并同步...'):
-                try:
-                    img_str = process_image(uploaded_file)
-                    # 写入表格：名称、材料、做法、图片数据
-                    sheet.append_row([new_name, new_ingredients, new_steps, img_str])
-                    st.success(f"✅ {new_name} 已存入！")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"保存失败，可能是图片太大了，请尝试换张小图。报错详情: {e}")
+            with st.spinner('同步中...'):
+                img_str = process_image(uploaded_file)
+                sheet.append_row([new_name, new_ingredients, new_steps, img_str])
+                st.success(f"✅ {new_name} 已存好！")
+                st.rerun()
         else:
-            st.error("请填全名称、材料和步骤！")
+            st.error("信息填全才能保存哦！")
 
-# --- 5. 搜索与展示 ---
-search_query = st.text_input("🔍 搜索配方...", placeholder="输入关键词...")
+# --- 5. 搜索框 ---
+search_query = st.text_input("🔍 搜索配方库...", placeholder="输入饮品名字")
 st.markdown("---")
 
+# --- 6. 展示区：回归直观排版 ---
 try:
     data = sheet.get_all_records()
     if data:
@@ -78,19 +70,26 @@ try:
             data = [item for item in data if search_query.lower() in str(item.get('名称','')).lower()]
         
         for item in reversed(data):
+            # 使用容器包装每一条数据
             with st.container():
-                col1, col2 = st.columns([1, 2])
+                col1, col2 = st.columns([1, 1.5])
+                
                 with col1:
                     img_data = item.get('图片数据')
                     if img_data:
                         st.image(f"data:image/jpeg;base64,{img_data}", use_container_width=True)
                     else:
-                        st.caption("📷 暂无照片")
+                        st.image("https://via.placeholder.com/400x300?text=No+Photo", use_container_width=True)
+                
                 with col2:
                     st.header(f"🍸 {item.get('名称')}")
-                    t1, t2 = st.tabs(["🛒 材料", "👨‍🍳 步骤"])
-                    with t1: st.info(item.get('材料'))
-                    with t2: st.success(item.get('做法'))
-                st.markdown("---")
+                    # 直接显示材料
+                    st.subheader("🛒 准备材料")
+                    st.write(item.get('材料'))
+                    # 直接显示步骤
+                    st.subheader("👨‍🍳 制作步骤")
+                    st.write(item.get('做法'))
+                
+                st.markdown("---") # 分割线
 except Exception:
-    st.info("💡 实验室就绪，快去录入吧！")
+    st.info("💡 实验室已就绪，快去录入吧！")
