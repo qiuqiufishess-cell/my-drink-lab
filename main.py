@@ -13,7 +13,11 @@ def get_gspread_client():
 try:
     client = get_gspread_client()
     # 【核心】这里必须是你 Google 表格的准确名字！
-    sheet = client.open("My_Drink_Lab_Data").sheet1 
+    # 把这一段替换掉原来的 scope
+scope = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
 except Exception as e:
     st.error(f"连接表格失败，请检查表格名字。错误原因: {e}")
     st.stop()
