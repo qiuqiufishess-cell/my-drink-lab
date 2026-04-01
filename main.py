@@ -19,28 +19,29 @@ except Exception as e:
     st.error(f"连接失败: {e}")
     st.stop()
 
-# --- 2. 图片压缩工具 ---
+# --- 2. 强力图片压缩工具 ---
 def process_image(image_file):
     if image_file is not None:
         img = Image.open(image_file)
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
-        max_width = 400
+        
+        # 进一步缩小尺寸到 300 像素宽，确保 100% 成功
+        max_width = 300
         w_percent = (max_width / float(img.size[0]))
         h_size = int((float(img.size[1]) * float(w_percent)))
         img = img.resize((max_width, h_size), Image.Resampling.LANCZOS)
+        
         buffered = io.BytesIO()
-        img.save(buffered, format="JPEG", quality=75)
+        # 画质调低到 50%，极大减小体积
+        img.save(buffered, format="JPEG", quality=50) 
         return base64.b64encode(buffered.getvalue()).decode()
     return ""
 
 # --- 3. 强制换行函数 ---
 def display_as_list(text):
-    if not text:
-        return "暂无内容"
-    # 将文本按行拆分
+    if not text: return "暂无内容"
     lines = [line.strip() for line in str(text).split('\n') if line.strip()]
-    # 使用 HTML 的 <br> 标签来强制换行
     return "<br>".join([f"· {line}" for line in lines])
 
 # --- 4. 页面配置 ---
@@ -57,19 +58,23 @@ with st.sidebar:
     
     if st.button("🚀 存入实验室"):
         if new_name and new_ingredients and new_steps:
-            with st.spinner('同步中...'):
-                img_str = process_image(uploaded_file)
-                sheet.append_row([new_name, new_ingredients, new_steps, img_str])
-                st.success(f"✅ {new_name} 已存好！")
-                st.rerun()
+            with st.spinner('正在同步到云端...'):
+                try:
+                    img_str = process_image(uploaded_file)
+                    # 写入表格
+                    sheet.append_row([new_name, new_ingredients, new_steps, img_str])
+                    st.success(f"✅ {new_name} 已存好！")
+                    st.rerun()
+                except Exception:
+                    # 保护机制：如果还是太大，给用户一个友好提示
+                    st.error("😖 图片还是太大了，请尝试截图上传或换张小一点的照片。")
         else:
             st.error("信息填全才能保存哦！")
 
-# --- 6. 搜索框 ---
+# --- 6. 搜索与展示 ---
 search_query = st.text_input("🔍 搜索配方库...", placeholder="输入饮品名字")
 st.markdown("---")
 
-# --- 7. 展示区 ---
 try:
     data = sheet.get_all_records()
     if data:
@@ -84,18 +89,13 @@ try:
                     if img_data:
                         st.image(f"data:image/jpeg;base64,{img_data}", use_container_width=True)
                     else:
-                        st.image("https://via.placeholder.com/400x300?text=No+Photo", use_container_width=True)
-                
+                        st.image("https://via.placeholder.com/300x300?text=No+Photo", use_container_width=True)
                 with col2:
                     st.markdown(f"### 🍸 {item.get('名称')}")
-                    
-                    # 使用 html 模式来强制分行
                     st.markdown("**🛒 准备材料**")
-                    st.markdown(f"<div style='line-height:1.8'>{display_as_list(item.get('材料'))}</div>", unsafe_allow_html=True)
-                    
+                    st.markdown(f"<div style='line-height:1.6'>{display_as_list(item.get('材料'))}</div>", unsafe_allow_html=True)
                     st.markdown("<br>**👨‍🍳 制作步骤**", unsafe_allow_html=True)
-                    st.markdown(f"<div style='line-height:1.8'>{display_as_list(item.get('做法'))}</div>", unsafe_allow_html=True)
-                
+                    st.markdown(f"<div style='line-height:1.6'>{display_as_list(item.get('做法'))}</div>", unsafe_allow_html=True)
                 st.markdown("---")
 except Exception:
     st.info("💡 实验室已就绪，快去录入吧！")
