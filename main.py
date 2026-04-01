@@ -11,13 +11,13 @@ def get_gspread_client():
     creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
     return gspread.authorize(creds)
 
-# 尝试连接
+# 尝试初始化连接
 try:
     client = get_gspread_client()
-    # 这里的名字确保和你的表格名 My_Drink_Lab_Data 一致
+    # 确保这里的名字和你的表格文件名完全一致
     sheet = client.open("My_Drink_Lab_Data").sheet1 
 except Exception as e:
-    st.error(f"连接失败: {e}")
+    st.error(f"连接 Google 服务器成功，但无法打开表格。请确认表格名无误。详情: {e}")
     st.stop()
 
 # --- 2. 界面设计 ---
@@ -32,28 +32,30 @@ with st.sidebar:
     
     if st.button("保存到云端"):
         if name and recipe:
-            with st.spinner('正在上传...'):
+            with st.spinner('正在同步到云端...'):
+                # 往表格追加一行
                 sheet.append_row([name, recipe])
                 st.success("✅ 存好啦！")
-                # 强制刷新以显示新数据
                 st.rerun()
         else:
-            st.error("请填完名称和配方！")
+            st.error("名字和配方都要填哦！")
 
-# --- 3. 数据展示 (增加空表格处理) ---
+# --- 3. 展示区 (增加空表格容错) ---
 st.subheader("📖 实验室配方清单")
 
 try:
-    # 获取所有数据
+    # 获取数据
     data = sheet.get_all_records()
     
     if not data:
-        st.info("💡 表格目前是空的，快在左侧录入你的第一个配方吧！")
+        st.info("💡 实验室空荡荡的，快在左侧录入你的第一个配方吧！")
     else:
-        # 倒序显示
         for item in reversed(data):
-            with st.expander(f"🍸 {item.get('名称', '未命名')}"):
-                st.write(f"**调制秘籍：**\n{item.get('配方', '暂无内容')}")
-except Exception as e:
-    # 如果表格完全没有数据行，gspread 有时会抛错，这里做一个友好提示
-    st.info("💡 实验室准备就绪！请在左侧侧边栏添加第一个饮品配方。")
+            # 使用 .get() 防止列名对不上的报错
+            n = item.get('名称', '未知饮品')
+            r = item.get('配方', '暂无配方')
+            with st.expander(f"🍸 {n}"):
+                st.write(f"**调制秘籍：**\n{r}")
+except Exception:
+    # 如果表格完全没有数据（gspread 报错），也显示提示
+    st.info("💡 实验室已就绪，等待第一个配方入库！")
