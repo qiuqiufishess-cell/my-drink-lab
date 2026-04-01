@@ -19,33 +19,40 @@ except Exception as e:
     st.error(f"连接失败: {e}")
     st.stop()
 
-# --- 2. 图片压缩工具 (核心：防止报错) ---
+# --- 2. 图片压缩工具 ---
 def process_image(image_file):
     if image_file is not None:
         img = Image.open(image_file)
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
-        # 缩小尺寸
-        max_width = 400 
+        max_width = 400
         w_percent = (max_width / float(img.size[0]))
         h_size = int((float(img.size[1]) * float(w_percent)))
         img = img.resize((max_width, h_size), Image.Resampling.LANCZOS)
-        # 压缩质量
         buffered = io.BytesIO()
         img.save(buffered, format="JPEG", quality=75)
         return base64.b64encode(buffered.getvalue()).decode()
     return ""
 
-# --- 3. 页面配置 ---
+# --- 3. 自动分行并加点的魔法函数 ---
+def display_as_list(text):
+    if not text:
+        return "暂无内容"
+    # 将文本按行拆分，并过滤掉空行
+    lines = [line.strip() for line in str(text).split('\n') if line.strip()]
+    # 在每行前面加上 · 
+    return "\n".join([f"· {line}" for line in lines])
+
+# --- 4. 页面配置 ---
 st.set_page_config(page_title="秋秋的饮品实验室", page_icon="🍹", layout="wide")
 st.title("🍹 秋秋的云端饮品实验室")
 
-# --- 4. 侧边栏：录入 ---
+# --- 5. 侧边栏：录入 ---
 with st.sidebar:
     st.header("📝 记录新配方")
     new_name = st.text_input("饮品名称")
-    new_ingredients = st.text_area("准备材料 (每行一个)")
-    new_steps = st.text_area("制作步骤")
+    new_ingredients = st.text_area("准备材料 (每行一个)", placeholder="例：浓缩咖啡\n冰牛奶")
+    new_steps = st.text_area("制作步骤 (每行一个)", placeholder="例：杯中加冰\n倒入牛奶")
     uploaded_file = st.file_uploader("📸 上传饮品照片", type=['png', 'jpg', 'jpeg'])
     
     if st.button("🚀 存入实验室"):
@@ -58,11 +65,11 @@ with st.sidebar:
         else:
             st.error("信息填全才能保存哦！")
 
-# --- 5. 搜索框 ---
+# --- 6. 搜索框 ---
 search_query = st.text_input("🔍 搜索配方库...", placeholder="输入饮品名字")
 st.markdown("---")
 
-# --- 6. 展示区：回归直观排版 ---
+# --- 7. 展示区：自动分行排版 ---
 try:
     data = sheet.get_all_records()
     if data:
@@ -70,7 +77,6 @@ try:
             data = [item for item in data if search_query.lower() in str(item.get('名称','')).lower()]
         
         for item in reversed(data):
-            # 使用容器包装每一条数据
             with st.container():
                 col1, col2 = st.columns([1, 1.5])
                 
@@ -83,13 +89,14 @@ try:
                 
                 with col2:
                     st.header(f"🍸 {item.get('名称')}")
-                    # 直接显示材料
+                    
+                    # 关键修改：调用 display_as_list 函数来格式化显示
                     st.subheader("🛒 准备材料")
-                    st.write(item.get('材料'))
-                    # 直接显示步骤
+                    st.markdown(display_as_list(item.get('材料')))
+                    
                     st.subheader("👨‍🍳 制作步骤")
-                    st.write(item.get('做法'))
+                    st.markdown(display_as_list(item.get('做法')))
                 
-                st.markdown("---") # 分割线
+                st.markdown("---")
 except Exception:
     st.info("💡 实验室已就绪，快去录入吧！")
