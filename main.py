@@ -13,7 +13,7 @@ try:
     client = get_gspread_client()
     # 【核心修改点】使用 ID 打开表格，百分之百精准
     # 请将下面括号里的内容替换为你刚刚复制的那一长串 ID
-    sheet = client.open_by_key("你的表格ID粘贴在这里").sheet1 
+    sheet = client.open_by_key("1eZuei2NyFVuKyZkooFPbc6X9J1waGoP4c2rnYcucZ4s").sheet1 
 except Exception as e:
     st.error(f"连接失败！请确认 ID 是否正确。详情: {e}")
     st.stop()
