@@ -30,7 +30,7 @@ if "my_recipes" not in st.session_state:
         "生椰拿铁": {
             "image": "https://images.unsplash.com/photo-1559496417-e7f25cb247f3",
             "ingredients": ["冰块满杯", "厚椰乳 180ml", "牛奶 120ml","咖啡液 30ml"],
-            "steps": "先加冰，再倒椰乳，最后淋咖啡。"
+            "steps": "先加冰，再倒椰乳和牛奶，最后淋咖啡。"
         }
     }
 
