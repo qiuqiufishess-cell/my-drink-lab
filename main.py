@@ -45,6 +45,7 @@ st.title("🍹 秋秋的云端饮品实验室")
 # --- 5. 侧边栏：录入 ---
 with st.sidebar:
     st.header("📝 记录新灵感")
+    MY_PASSWORD = "qiuqiu123"
     new_name = st.text_input("饮品名称", key="add_name")
     new_ing = st.text_area("准备材料", key="add_ing")
     new_steps = st.text_area("制作步骤", key="add_steps")
